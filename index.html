@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video Subtitle Animation Maker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDMincho:wght@400;700&family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDPMincho:wght@400;700&family=Dela+Gothic+One&family=DotGothic16&family=Hina+Mincho&family=IBM+Plex+Sans+JP:wght@400;500;700&family=Klee+One:wght@400;600&family=Kiwi+Maru:wght@400;500&family=Kosugi&family=Kosugi+Maru&family=M+PLUS+1:wght@400;500;700&family=M+PLUS+1p:wght@400;500;700&family=M+PLUS+2:wght@400;500;700&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@400;600;700&family=Rampart+One&family=Reggae+One&family=Sawarabi+Gothic&family=Sawarabi+Mincho&family=Shippori+Mincho:wght@400;600;700&family=Stick&family=Yomogi&family=Yuji+Boku&family=Yuji+Mai&family=Yuji+Syuku&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&family=Zen+Old+Mincho:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Video Subtitle Animation Maker</h1>
+      <p>音声に合わせて字幕を打ち込み、透過PNG連番を書き出す動画字幕作成支援ツール</p>
+    </div>
+    <div class="header-actions">
+      <button id="manualOpenBtn" type="button">取扱説明</button>
+      <button id="saveJsonBtn" type="button">JSON保存</button>
+      <label class="file-button">
+        JSON読込
+        <input id="loadJsonInput" type="file" accept="application/json,.json" />
+      </label>
+      <button id="saveCacheBtn" type="button">キャッシュ保存</button>
+      <button id="loadCacheBtn" type="button">キャッシュ復元</button>
+    </div>
+  </header>
+
+
+  <div id="manualModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-manual-close></div>
+    <section class="manual-dialog" role="dialog" aria-modal="true" aria-labelledby="manualTitle">
+      <div class="manual-header">
+        <div>
+          <h2 id="manualTitle">取扱説明</h2>
+          <p>動画用の字幕アニメーションを作成し、透過PNG連番として書き出すためのブラウザツールです。</p>
+        </div>
+        <button id="manualCloseBtn" type="button" class="manual-close" aria-label="取扱説明を閉じる">×</button>
+      </div>
+
+      <div class="manual-body">
+        <section>
+          <h3>1. 基本の流れ</h3>
+          <ol>
+            <li>「音声ファイル」から楽曲や仮音源を読み込みます。</li>
+            <li>「字幕TXT」から字幕を読み込みます。TXTの1行が1つの字幕ボタンになります。</li>
+            <li>音声を再生し、字幕を入れたいタイミングで左側の字幕ボタンをクリックします。</li>
+            <li>入力済みの字幕はグレー表示になります。もう一度クリックするとキャンセルできます。</li>
+            <li>中央のプレビューで確認しながら、右側で選択中の字幕の見た目や動きを調整します。</li>
+            <li>完成したら「透過PNG連番ZIP書き出し」で書き出します。</li>
+          </ol>
+        </section>
+
+        <section>
+          <h3>2. 字幕TXTの作り方</h3>
+          <p>1行につき1つの字幕として登録されます。空行は読み飛ばされます。</p>
+          <pre>君の声が光になる
+夜を越えて届いていく
+まだ名前のない明日へ</pre>
+        </section>
+
+        <section>
+          <h3>3. 字幕の入力・キャンセル</h3>
+          <ul>
+            <li>音声の現在時刻に合わせて字幕ボタンを押すと、その時刻に字幕を配置します。</li>
+            <li>配置済みの字幕ボタンをもう一度押すと、その字幕の配置を取り消します。</li>
+            <li>入力済み字幕は下の一覧から選択でき、開始秒・終了秒も手動調整できます。</li>
+            <li>直前に使った字幕設定は、次に入れる字幕へ引き継がれます。</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>4. プレビュー背景</h3>
+          <ul>
+            <li>背景色と背景画像は、編集時の確認用です。</li>
+            <li>背景画像は表示サイズ、X移動、Y移動で位置を調整できます。</li>
+            <li>背景画像は透過PNG書き出しには含まれません。</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>5. 字幕ごとの設定</h3>
+          <ul>
+            <li>フォント、フォントサイズ、文字色、行間、字間を字幕ごとに変更できます。</li>
+            <li>位置X・位置Y、文字PAN X/Y、サイズ移動、回転、回転移動を設定できます。</li>
+            <li>左寄せ・中央寄せ・右寄せを選べます。</li>
+            <li>縁取り、縁取り色、フチ太さ、ドロップシャドウ、影ぼかし、影X/Yを調整できます。</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>6. アニメーション</h3>
+          <ul>
+            <li>通常表示：字幕全体をそのまま表示します。</li>
+            <li>タイプライター表示：文字を順番に表示します。</li>
+            <li>一文字ずつ拡大表示：登場時のみ、文字が小さいサイズから設定サイズへ1文字ずつ拡大しながら表示されます。</li>
+            <li>ジャンプしながらタイプライター表示：文字を順番に表示しながら、1文字ずつ波打つようにジャンプします。</li>
+            <li>ジャンプしながら表示：全文表示した状態で、1文字ずつ波打つようにジャンプします。</li>
+            <li>登場時と退場時だけジャンプ：表示開始・終了付近だけ、1文字ずつ波打つようにジャンプします。</li>
+            <li>ジャンプの大きさ・速さ、タイプライター速度はスライダーで調整できます。</li>
+            <li>一文字ずつ拡大表示の出現テンポも、タイプライター速度で調整できます。</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>7. フェード・プリセット</h3>
+          <ul>
+            <li>フェードイン、フェードアウトはチェックボックスで適用できます。</li>
+            <li>選択中の字幕の見た目・動きはプリセット登録できます。</li>
+            <li>プリセットには字幕本文・開始秒・終了秒は含まれません。別の字幕への使い回し用です。</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>8. 保存と復元</h3>
+          <ul>
+            <li>JSON保存：プロジェクトをファイルとして保存します。</li>
+            <li>JSON読込：保存したJSONから編集状態を復元します。</li>
+            <li>キャッシュ保存：ブラウザ内に一時保存します。</li>
+            <li>キャッシュ復元：ブラウザ内に保存した内容を復元します。</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>9. 書き出し</h3>
+          <ul>
+            <li>「書き出し開始秒」「書き出し終了秒」「FPS」「ファイル名接頭辞」を設定します。</li>
+            <li>「透過PNG連番ZIP書き出し」を押すと、背景なしの透過PNGがZIPで保存されます。</li>
+            <li>書き出した連番PNGは動画編集ソフトなどで読み込み、動画字幕として合成できます。</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>10. 注意点</h3>
+          <ul>
+            <li>長尺・高FPS・大きな文字装飾は、ブラウザのメモリ使用量が増えます。</li>
+            <li>書き出し中はページを閉じたり、再読み込みしないでください。</li>
+            <li>ローカルで直接開くより、GitHub PagesなどHTTP環境での利用を推奨します。</li>
+          </ul>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <main class="app-layout">
+    <aside class="panel left-panel">
+      <details open>
+        <summary>素材読み込み</summary>
+        <div class="control-stack">
+          <label class="field">
+            <span>音声ファイル</span>
+            <input id="audioInput" type="file" accept="audio/*" />
+          </label>
+          <div class="asset-status-row">
+            <div id="audioFileInfo" class="asset-status">音声未読込</div>
+            <button id="clearAudioBtn" type="button">解除</button>
+          </div>
+
+          <label class="field">
+            <span>字幕TXT</span>
+            <input id="lyricsInput" type="file" accept="text/plain,.txt" />
+          </label>
+          <p class="hint">TXTの1行を1つの字幕として字幕ボタンにします。空行は自動除外します。</p>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>プレビュー背景色</span>
+              <input id="previewBgColorInput" type="color" value="#f6fbff" />
+            </label>
+            <label class="field">
+              <span>背景画像の表示</span>
+              <select id="previewBgFitSelect">
+                <option value="cover">画面いっぱい</option>
+                <option value="contain">全体表示</option>
+                <option value="stretch">引き伸ばし</option>
+              </select>
+            </label>
+          </div>
+          <label class="field">
+            <span>プレビュー背景画像</span>
+            <input id="previewBgImageInput" type="file" accept="image/*" />
+          </label>
+          <div class="range-field">
+            <div class="range-head"><span>背景画像サイズ</span><output id="previewBgScaleOutput">100%</output></div>
+            <input id="previewBgScaleInput" type="range" min="1" max="100" step="1" value="100" />
+          </div>
+          <div class="grid-2">
+            <div class="range-field">
+              <div class="range-head"><span>背景画像移動X</span><output id="previewBgOffsetXOutput">0px</output></div>
+              <input id="previewBgOffsetXInput" type="range" min="-1920" max="1920" step="1" value="0" />
+            </div>
+            <div class="range-field">
+              <div class="range-head"><span>背景画像移動Y</span><output id="previewBgOffsetYOutput">0px</output></div>
+              <input id="previewBgOffsetYInput" type="range" min="-1080" max="1080" step="1" value="0" />
+            </div>
+          </div>
+          <div class="button-row">
+            <button id="clearPreviewBgImageBtn" type="button">背景画像を解除</button>
+          </div>
+          <p class="hint">背景色・背景画像はプレビュー確認用です。透過PNG書き出しには含まれません。</p>
+        </div>
+      </details>
+
+      <details open>
+        <summary>基本設定</summary>
+        <div class="control-stack">
+          <div class="grid-2">
+            <label class="field">
+              <span>基本フォント</span>
+              <select id="defaultFontFamilyInput"></select>
+            </label>
+            <div class="range-field">
+              <div class="range-head"><span>基本サイズ</span><output id="defaultFontSizeOutput"></output></div>
+              <input id="defaultFontSizeInput" type="range" min="10" max="300" step="1" value="86" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span>初期表示秒数</span>
+              <input id="defaultDurationInput" type="number" min="0.1" max="60" step="0.1" value="3" />
+            </label>
+            <label class="field">
+              <span>前の字幕の終了を自動調整</span>
+              <select id="autoChainSelect">
+                <option value="1">する</option>
+                <option value="0">しない</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span>初期アニメーション</span>
+              <select id="defaultAnimationInput">
+                <option value="normal">通常表示</option>
+                <option value="typewriter">タイプライター表示</option>
+                <option value="scaleInChars">一文字ずつ拡大表示</option>
+                <option value="jumpTypewriter">ジャンプしながらタイプライター表示</option>
+                <option value="jumpReveal">ジャンプしながら表示</option>
+                <option value="jumpInOut">登場時と退場時だけジャンプ</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>初期文字揃え</span>
+              <select id="defaultAlignInput">
+                <option value="left">左寄せ</option>
+                <option value="center" selected>中央寄せ</option>
+                <option value="right">右寄せ</option>
+              </select>
+            </label>
+          </div>
+          <button id="applyDefaultToSelectedBtn" type="button">選択中の字幕へ基本設定を反映</button>
+        </div>
+      </details>
+
+      <details open>
+        <summary>字幕ボタン一覧</summary>
+        <div class="control-stack">
+          <div class="lyrics-toolbar">
+            <span id="lyricsCountInfo">字幕未読込</span>
+            <button id="clearLyricsBtn" type="button">一覧クリア</button>
+          </div>
+          <div id="lyricsButtonList" class="lyrics-button-list"></div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>入力済み字幕</summary>
+        <div class="control-stack">
+          <div id="cueList" class="cue-list"></div>
+        </div>
+      </details>
+    </aside>
+
+    <section class="center-panel">
+      <div class="panel preview-panel">
+        <div class="preview-toolbar">
+          <div>
+            <strong>Subtitle Preview</strong>
+            <span>1920 × 1080 / 透過書き出し</span>
+          </div>
+          <div id="activeCueInfo" class="active-cue-info">表示中の字幕なし</div>
+        </div>
+        <div class="canvas-shell">
+          <canvas id="previewCanvas" width="1920" height="1080"></canvas>
+        </div>
+      </div>
+
+      <div class="panel transport-panel">
+        <div class="audio-row">
+          <audio id="audioPlayer" controls></audio>
+          <button id="setPreviewFromAudioBtn" type="button">現在時刻でプレビュー</button>
+        </div>
+        <div class="time-row">
+          <label class="field compact-field">
+            <span>プレビュー秒</span>
+            <input id="previewTimeInput" type="number" min="0" step="0.01" value="0" />
+          </label>
+          <input id="previewTimeRange" type="range" min="0" max="30" step="0.01" value="0" />
+          <button id="renderPreviewBtn" type="button">更新</button>
+        </div>
+        <p class="hint">音声再生中に左の字幕ボタンを押すと、その時刻に字幕キューを作成します。</p>
+      </div>
+    </section>
+
+    <aside class="panel right-panel">
+      <details open>
+        <summary>選択中の字幕設定</summary>
+        <div id="selectedEmptyMessage" class="empty-message">入力済み字幕を選択してください。</div>
+        <div id="cueEditor" class="control-stack hidden">
+          <div class="preset-box">
+            <div class="preset-title">字幕設定プリセット</div>
+            <div class="grid-2">
+              <label class="field">
+                <span>プリセット名</span>
+                <input id="presetNameInput" type="text" placeholder="例：サビ中央ジャンプ" />
+              </label>
+              <label class="field">
+                <span>登録済みプリセット</span>
+                <select id="presetSelect"></select>
+              </label>
+            </div>
+            <div class="button-row">
+              <button id="savePresetBtn" type="button">現在設定を登録</button>
+              <button id="applyPresetBtn" type="button">選択プリセットを適用</button>
+              <button id="deletePresetBtn" type="button" class="danger">削除</button>
+            </div>
+            <p class="hint">字幕本文・開始秒・終了秒は含めず、見た目とアニメーション設定だけを保存します。</p>
+          </div>
+
+          <label class="field">
+            <span>字幕テキスト</span>
+            <textarea id="cueTextInput" rows="3"></textarea>
+          </label>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>開始秒</span>
+              <input id="cueStartInput" type="number" min="0" step="0.01" />
+            </label>
+            <label class="field">
+              <span>終了秒</span>
+              <input id="cueEndInput" type="number" min="0" step="0.01" />
+            </label>
+          </div>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>アニメーション</span>
+              <select id="cueAnimationInput">
+                <option value="normal">通常表示</option>
+                <option value="typewriter">タイプライター表示</option>
+                <option value="scaleInChars">一文字ずつ拡大表示</option>
+                <option value="jumpTypewriter">ジャンプしながらタイプライター表示</option>
+                <option value="jumpReveal">ジャンプしながら表示</option>
+                <option value="jumpInOut">登場時と退場時だけジャンプ</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>文字揃え</span>
+              <select id="cueAlignInput">
+                <option value="left">左寄せ</option>
+                <option value="center">中央寄せ</option>
+                <option value="right">右寄せ</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="range-field">
+            <div class="range-head"><span>位置X</span><output id="cueXOutput"></output></div>
+            <input id="cueXInput" type="range" min="0" max="1920" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>位置Y</span><output id="cueYOutput"></output></div>
+            <input id="cueYInput" type="range" min="0" max="1080" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>折り返し幅</span><output id="cueMaxWidthOutput"></output></div>
+            <input id="cueMaxWidthInput" type="range" min="100" max="1920" step="1" />
+          </div>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>フォント</span>
+              <select id="cueFontFamilyInput"></select>
+            </label>
+            <div class="range-field">
+              <div class="range-head"><span>フォントサイズ</span><output id="cueFontSizeOutput"></output></div>
+              <input id="cueFontSizeInput" type="range" min="10" max="300" step="1" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span>文字色</span>
+              <input id="cueColorInput" type="color" />
+            </label>
+            <label class="field">
+              <span>行間</span>
+              <input id="cueLineHeightInput" type="number" min="0.5" max="3" step="0.05" />
+            </label>
+          </div>
+
+          <div class="range-field">
+            <div class="range-head"><span>字間</span><output id="cueLetterSpacingOutput"></output></div>
+            <input id="cueLetterSpacingInput" type="range" min="-20" max="120" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>字間移動</span><output id="cueLetterSpacingPanOutput"></output></div>
+            <input id="cueLetterSpacingPanInput" type="range" min="-120" max="120" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>文字PAN移動X</span><output id="cuePanXOutput"></output></div>
+            <input id="cuePanXInput" type="range" min="-1920" max="1920" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>文字PAN移動Y</span><output id="cuePanYOutput"></output></div>
+            <input id="cuePanYInput" type="range" min="-1080" max="1080" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>文字サイズ倍率</span><output id="cueScaleOutput"></output></div>
+            <input id="cueScaleInput" type="range" min="10" max="400" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>サイズ移動</span><output id="cueScalePanOutput"></output></div>
+            <input id="cueScalePanInput" type="range" min="-300" max="300" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>文字回転</span><output id="cueRotationOutput"></output></div>
+            <input id="cueRotationInput" type="range" min="-360" max="360" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>回転移動</span><output id="cueRotationPanOutput"></output></div>
+            <input id="cueRotationPanInput" type="range" min="-720" max="720" step="1" />
+          </div>
+
+          <div class="range-field">
+            <div class="range-head"><span>タイプライター速度</span><output id="cueCpsOutput"></output></div>
+            <input id="cueCpsInput" type="range" min="1" max="120" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>ジャンプの大きさ</span><output id="cueJumpSizeOutput"></output></div>
+            <input id="cueJumpSizeInput" type="range" min="0" max="160" step="1" />
+          </div>
+          <div class="range-field">
+            <div class="range-head"><span>ジャンプの速さ</span><output id="cueJumpSpeedOutput"></output></div>
+            <input id="cueJumpSpeedInput" type="range" min="1" max="20" step="0.5" />
+          </div>
+
+          <div class="check-grid">
+            <label><input id="cueFadeInInput" type="checkbox" /> フェードイン</label>
+            <label><input id="cueFadeOutInput" type="checkbox" /> フェードアウト</label>
+            <label><input id="cueStrokeEnabledInput" type="checkbox" /> 縁取り</label>
+            <label><input id="cueShadowEnabledInput" type="checkbox" /> ドロップシャドウ</label>
+          </div>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>フェードイン秒</span>
+              <input id="cueFadeInDurationInput" type="number" min="0.01" max="5" step="0.01" />
+            </label>
+            <label class="field">
+              <span>フェードアウト秒</span>
+              <input id="cueFadeOutDurationInput" type="number" min="0.01" max="5" step="0.01" />
+            </label>
+          </div>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>フチ色</span>
+              <input id="cueStrokeColorInput" type="color" />
+            </label>
+            <div class="range-field">
+              <div class="range-head"><span>フチ太さ</span><output id="cueStrokeWidthOutput"></output></div>
+              <input id="cueStrokeWidthInput" type="range" min="0" max="80" step="1" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>影色</span>
+              <input id="cueShadowColorInput" type="color" />
+            </label>
+            <div class="range-field">
+              <div class="range-head"><span>影ぼかし</span><output id="cueShadowBlurOutput"></output></div>
+              <input id="cueShadowBlurInput" type="range" min="0" max="120" step="1" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span>影X</span>
+              <input id="cueShadowOffsetXInput" type="number" min="-120" max="120" step="1" />
+            </label>
+            <label class="field">
+              <span>影Y</span>
+              <input id="cueShadowOffsetYInput" type="number" min="-120" max="120" step="1" />
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="duplicateCueBtn" type="button">複製</button>
+            <button id="deleteCueBtn" type="button" class="danger">削除</button>
+          </div>
+        </div>
+      </details>
+
+      <details open>
+        <summary>書き出し</summary>
+        <div class="control-stack">
+          <div class="grid-2">
+            <label class="field">
+              <span>FPS</span>
+              <input id="exportFpsInput" type="number" min="1" max="60" step="1" value="30" />
+            </label>
+            <label class="field">
+              <span>接頭辞</span>
+              <input id="exportPrefixInput" type="text" value="subtitle" />
+            </label>
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span>開始秒</span>
+              <input id="exportStartInput" type="number" min="0" step="0.01" value="0" />
+            </label>
+            <label class="field">
+              <span>終了秒</span>
+              <input id="exportEndInput" type="number" min="0" step="0.01" value="3" />
+            </label>
+          </div>
+          <button id="setExportEndFromAudioBtn" type="button">音声の長さを終了秒へ</button>
+          <button id="exportZipBtn" type="button" class="primary">透過PNG連番ZIPを書き出し</button>
+          <div id="exportProgress" class="progress-text"></div>
+        </div>
+      </details>
+    </aside>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
