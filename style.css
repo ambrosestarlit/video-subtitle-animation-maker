@@ -476,113 +476,151 @@ summary {
   font-size: 0.92rem;
 }
 
-.modal.hidden {
-  display: none;
+
+.header-language {
+  min-width: 9.5rem;
 }
 
-.modal {
+.header-language > span {
+  font-size: 0.78rem;
+}
+
+.header-language select {
+  min-width: 8.5rem;
+}
+
+
+.custom-file-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.custom-file-button {
+  min-height: 2.65rem;
+}
+
+.file-select-status {
+  min-width: 0;
+  border: 1px dashed rgba(102, 141, 169, 0.55);
+  border-radius: 12px;
+  padding: 0.58rem 0.7rem;
+  background: rgba(245, 250, 254, 0.82);
+  color: var(--muted);
+  font-size: 0.83rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visually-hidden-file {
+  position: absolute !important;
+  inline-size: 1px !important;
+  block-size: 1px !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+.modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 1000;
   display: grid;
   place-items: center;
-  padding: 1.5rem;
+  padding: 1rem;
+  background: rgba(28, 44, 58, 0.46);
+  backdrop-filter: blur(8px);
 }
 
-.modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(22, 38, 52, 0.48);
-  backdrop-filter: blur(4px);
-}
-
-.manual-dialog {
-  position: relative;
-  width: min(920px, calc(100vw - 2rem));
-  max-height: min(86vh, 920px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid rgba(200, 220, 235, 0.95);
+.manual-modal {
+  width: min(920px, 96vw);
+  max-height: min(86vh, 840px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  border: 1px solid rgba(190, 213, 229, 0.98);
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 28px 80px rgba(18, 52, 76, 0.28);
+  background: var(--panel-solid);
+  box-shadow: 0 26px 70px rgba(32, 62, 86, 0.28);
+  overflow: hidden;
 }
 
-.manual-header {
+.manual-modal-header,
+.manual-modal-footer {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem 1.35rem 1rem;
-  border-bottom: 1px solid var(--line);
-  background: linear-gradient(135deg, rgba(238, 248, 255, 0.98), rgba(255, 255, 255, 0.98));
+  gap: 0.8rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(190, 213, 229, 0.8);
+  background: linear-gradient(90deg, rgba(233, 246, 255, 0.96), rgba(255, 255, 255, 0.86));
 }
 
-.manual-header h2 {
-  margin: 0 0 0.35rem;
-  font-size: 1.35rem;
+.manual-modal-footer {
+  justify-content: flex-end;
+  border-top: 1px solid rgba(190, 213, 229, 0.8);
+  border-bottom: 0;
 }
 
-.manual-header p {
+.manual-modal-header h2 {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.7;
+  font-size: 1.05rem;
+  color: #25495f;
 }
 
-.manual-close {
-  width: 2.45rem;
-  height: 2.45rem;
-  padding: 0;
-  border-radius: 999px;
-  font-size: 1.35rem;
+.modal-close-button {
+  min-width: 2.4rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 1.25rem;
   line-height: 1;
 }
 
-.manual-body {
-  overflow-y: auto;
-  padding: 1.2rem 1.35rem 1.45rem;
+.manual-modal-body {
+  overflow: auto;
+  padding: 1.1rem 1.25rem 1.35rem;
+  line-height: 1.75;
+  color: var(--text);
 }
 
-.manual-body section + section {
-  margin-top: 1.25rem;
-  padding-top: 1.05rem;
-  border-top: 1px dashed rgba(97, 120, 139, 0.3);
-}
-
-.manual-body h3 {
-  margin: 0 0 0.65rem;
+.manual-modal-body h3 {
+  margin: 1.25rem 0 0.35rem;
   font-size: 1rem;
-  color: var(--accent-dark);
+  color: #25495f;
 }
 
-.manual-body p,
-.manual-body li {
-  color: var(--text);
-  line-height: 1.8;
-  font-size: 0.92rem;
-}
-
-.manual-body p,
-.manual-body ol,
-.manual-body ul {
+.manual-modal-body h3:first-child {
   margin-top: 0;
-  margin-bottom: 0;
 }
 
-.manual-body ol,
-.manual-body ul {
-  padding-left: 1.35rem;
+.manual-modal-body p {
+  margin: 0.25rem 0 0.75rem;
 }
 
-.manual-body pre {
-  white-space: pre-wrap;
-  margin: 0.7rem 0 0;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid var(--line);
+.manual-modal-body ul,
+.manual-modal-body ol {
+  margin: 0.3rem 0 0.9rem 1.35rem;
+  padding: 0;
+}
+
+.manual-modal-body li {
+  margin: 0.18rem 0;
+}
+
+.manual-note {
+  border: 1px solid rgba(74, 158, 216, 0.28);
   border-radius: 14px;
-  background: #f5faff;
-  color: var(--text);
-  line-height: 1.8;
+  background: rgba(238, 248, 255, 0.82);
+  padding: 0.75rem 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .custom-file-row {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-modal {
+    width: 96vw;
+    max-height: 90vh;
+  }
 }

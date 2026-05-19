@@ -7,9 +7,10 @@
   const CACHE_STORE_NAME = "projects";
   const CACHE_KEY = "autosave";
   const PRESET_STORAGE_KEY = "video-subtitle-animation-maker-presets";
+  const DEFAULT_UI_LANGUAGE = ((navigator.language || "ja").toLowerCase().startsWith("ja") ? "ja" : "en");
 
   const FONT_OPTIONS = [
-    { label: "システムゴシック", value: "\"Yu Gothic UI\", \"Yu Gothic\", \"Hiragino Sans\", \"Meiryo\", sans-serif" },
+    { label: "システムゴシック", labelEn: "System Gothic", value: "\"Yu Gothic UI\", \"Yu Gothic\", \"Hiragino Sans\", \"Meiryo\", sans-serif" },
     { label: "Noto Sans JP", value: "\"Noto Sans JP\", sans-serif" },
     { label: "Zen Kaku Gothic New", value: "\"Zen Kaku Gothic New\", sans-serif" },
     { label: "BIZ UDPGothic", value: "\"BIZ UDPGothic\", sans-serif" },
@@ -47,12 +48,23 @@
 
   const canvas = $("#previewCanvas");
   const ctx = canvas.getContext("2d", { alpha: true });
+  const uiLanguageSelect = $("#uiLanguageSelect");
+  const openManualBtn = $("#openManualBtn");
+  const manualModal = $("#manualModal");
+  const manualModalTitle = $("#manualModalTitle");
+  const manualModalBody = $("#manualModalBody");
+  const closeManualBtn = $("#closeManualBtn");
+  const closeManualFooterBtn = $("#closeManualFooterBtn");
 
   const audioInput = $("#audioInput");
+  const audioChooseLabel = $("#audioChooseLabel");
+  const audioChosenLabel = $("#audioChosenLabel");
   const audioPlayer = $("#audioPlayer");
   const audioFileInfo = $("#audioFileInfo");
   const clearAudioBtn = $("#clearAudioBtn");
   const lyricsInput = $("#lyricsInput");
+  const lyricsChooseLabel = $("#lyricsChooseLabel");
+  const lyricsChosenLabel = $("#lyricsChosenLabel");
   const previewBgColorInput = $("#previewBgColorInput");
   const previewBgFitSelect = $("#previewBgFitSelect");
   const previewBgScaleInput = $("#previewBgScaleInput");
@@ -62,6 +74,8 @@
   const previewBgOffsetYInput = $("#previewBgOffsetYInput");
   const previewBgOffsetYOutput = $("#previewBgOffsetYOutput");
   const previewBgImageInput = $("#previewBgImageInput");
+  const previewBgChooseLabel = $("#previewBgChooseLabel");
+  const previewBgChosenLabel = $("#previewBgChosenLabel");
   const clearPreviewBgImageBtn = $("#clearPreviewBgImageBtn");
 
   const defaultFontFamilyInput = $("#defaultFontFamilyInput");
@@ -74,7 +88,7 @@
   const applyDefaultToSelectedBtn = $("#applyDefaultToSelectedBtn");
 
   const lyricsCountInfo = $("#lyricsCountInfo");
-  const clearLyricsBtn = $("#clearLyricsBtn");
+  const clearSubtitlesBtn = $("#clearSubtitlesBtn");
   const lyricsButtonList = $("#lyricsButtonList");
   const cueList = $("#cueList");
 
@@ -125,6 +139,10 @@
   const cueRotationPanOutput = $("#cueRotationPanOutput");
   const cueCpsInput = $("#cueCpsInput");
   const cueCpsOutput = $("#cueCpsOutput");
+  const cueScaleRevealMinInput = $("#cueScaleRevealMinInput");
+  const cueScaleRevealMinOutput = $("#cueScaleRevealMinOutput");
+  const cueScaleRevealSpeedInput = $("#cueScaleRevealSpeedInput");
+  const cueScaleRevealSpeedOutput = $("#cueScaleRevealSpeedOutput");
   const cueJumpSizeInput = $("#cueJumpSizeInput");
   const cueJumpSizeOutput = $("#cueJumpSizeOutput");
   const cueJumpSpeedInput = $("#cueJumpSpeedInput");
@@ -151,13 +169,11 @@
   const exportStartInput = $("#exportStartInput");
   const exportEndInput = $("#exportEndInput");
   const setExportEndFromAudioBtn = $("#setExportEndFromAudioBtn");
+  const exportSrtBtn = $("#exportSrtBtn");
   const exportZipBtn = $("#exportZipBtn");
   const exportProgress = $("#exportProgress");
 
   const saveJsonBtn = $("#saveJsonBtn");
-  const manualOpenBtn = $("#manualOpenBtn");
-  const manualModal = $("#manualModal");
-  const manualCloseBtn = $("#manualCloseBtn");
   const loadJsonInput = $("#loadJsonInput");
   const saveCacheBtn = $("#saveCacheBtn");
   const loadCacheBtn = $("#loadCacheBtn");
@@ -181,8 +197,10 @@
     rotationPan: 0,
     animation: "typewriter",
     cps: 24,
-    jumpSize: 28,
-    jumpSpeed: 8,
+    scaleRevealMin: 18,
+    scaleRevealSpeed: 24,
+    jumpSize: 17,
+    jumpSpeed: 1,
     fadeIn: true,
     fadeOut: true,
     fadeInDuration: 0.3,
@@ -205,6 +223,7 @@
     audioDataUrl: null,
     audioFileName: "",
     audioMimeType: "",
+    uiLanguage: DEFAULT_UI_LANGUAGE,
     previewBackgroundColor: "#f6fbff",
     previewBackgroundFit: "cover",
     previewBackgroundScale: 100,
@@ -230,6 +249,359 @@
   let state = initialState();
   let renderLoopRunning = false;
   let suppressEditorEvents = false;
+
+
+  const I18N = {
+    ja: {
+      appTitle: "Video Subtitle Animation Maker",
+      appSubtitle: "音声に合わせて字幕を打ち込み、透過PNG連番を書き出す動画字幕作成支援ツール",
+      language: "Language / 言語",
+      manual: "取扱説明", manualTitle: "取扱説明", close: "閉じる", chooseFile: "ファイルを選択", noFileSelected: "選択されていません", selectedFile: "選択中: {name}",
+      saveJson: "JSON保存", loadJson: "JSON読込", saveCache: "キャッシュ保存", loadCache: "キャッシュ復元",
+      secAssets: "素材読み込み", secDefaults: "基本設定", secSubtitlesList: "字幕ボタン一覧", secEntered: "入力済み字幕", secSelected: "選択中字幕設定", secExport: "書き出し",
+      audioFile: "音声ファイル", audioNotLoaded: "音声未読込", audioLoaded: "音声読込済み", loadedFile: "読込済み: {name}", clear: "解除",
+      lyricsTxt: "字幕TXT", lyricsHint: "TXTの1行を1つの字幕ボタンにします。空行は自動除外します。",
+      previewBgColor: "プレビュー背景色", bgFit: "背景画像の表示", fitCover: "画面いっぱい", fitContain: "全体表示", fitStretch: "引き伸ばし", previewBgImage: "プレビュー背景画像", bgScale: "背景画像サイズ", bgOffsetX: "背景画像移動X", bgOffsetY: "背景画像移動Y", clearBgImage: "背景画像を解除", bgHint: "背景色・背景画像はプレビュー確認用です。透過PNG書き出しには含まれません。",
+      defaultFont: "基本フォント", defaultSize: "基本サイズ", defaultDuration: "初期表示秒数", autoChain: "前字幕終了を自動調整", yes: "する", no: "しない", defaultAnimation: "初期アニメーション", defaultAlign: "初期文字揃え", applyDefaults: "選択中の字幕へ基本設定を反映",
+      animNormal: "通常表示", animTypewriter: "タイプライター表示", animScaleReveal: "拡大しながら表示", animJumpTypewriter: "ジャンプしながらタイプライター表示", animJumpReveal: "ジャンプしながら表示", animJumpInOut: "登場時と退場時だけジャンプ",
+      alignLeft: "左寄せ", alignCenter: "中央寄せ", alignRight: "右寄せ",
+      lyricsNotLoaded: "字幕未読込", clearList: "一覧クリア", lyricsButtonEmpty: "字幕TXTを読み込むと、ここに1行ずつボタンが追加されます。", enteredEmpty: "入力済み字幕はまだありません。音声再生中に字幕ボタンを押してください。",
+      inputAtCurrent: "クリックで現在時刻に入力", enteredAt: "入力済み {time} / 再クリックでキャンセル", linesCount: "{count}行",
+      previewCanvas: "Preview Canvas", previewCanvasSub: "1920 × 1080 / export transparent", noActiveSubtitles: "表示中の字幕なし", previewAtCurrentTime: "現在時刻でプレビュー", previewSeconds: "プレビュー秒", update: "更新", transportHint: "音声再生中に左の字幕ボタンを押すと、その時刻に字幕キューを作成します。",
+      selectedEmpty: "入力済み字幕を選択してください。", presetTitle: "字幕設定プリセット", presetName: "プリセット名", presetPlaceholder: "例：中央ジャンプ", registeredPresets: "登録済みプリセット", selectPreset: "プリセットを選択", noPreset: "プリセット未登録", saveCurrentAsPreset: "現在設定を登録", applySelectedPreset: "選択プリセットを適用", delete: "削除", presetHint: "字幕本文・開始秒・終了秒は含めず、見た目とアニメーション設定だけを保存します。",
+      lyricText: "字幕テキスト", startSec: "開始秒", endSec: "終了秒", animation: "アニメーション", textAlign: "文字揃え", positionX: "位置X", positionY: "位置Y", wrapWidth: "折り返し幅", font: "フォント", fontSize: "フォントサイズ", textColor: "文字色", lineHeight: "行間", letterSpacing: "字間", letterSpacingPan: "字間移動", textPanX: "文字PAN移動X", textPanY: "文字PAN移動Y", textScale: "文字サイズ倍率", scalePan: "サイズ移動", textRotation: "文字回転", rotationPan: "回転移動", typewriterSpeed: "タイプライター速度", scaleRevealMin: "拡大表示の最小サイズ", scaleRevealSpeed: "拡大表示の速度", jumpSize: "ジャンプの大きさ", jumpSpeed: "ジャンプの速さ", fadeIn: "フェードイン", fadeOut: "フェードアウト", stroke: "縁取り", dropShadow: "ドロップシャドウ", fadeInSec: "フェードイン秒", fadeOutSec: "フェードアウト秒", strokeColor: "フチ色", strokeWidth: "フチ太さ", shadowColor: "影色", shadowBlur: "影ぼかし", shadowX: "影X", shadowY: "影Y", duplicate: "複製",
+      export: "書き出し", fps: "FPS", prefix: "接頭辞", setEndFromAudio: "音声の長さを終了秒へ", exportZip: "透過PNG連番ZIPを書き出し", exportSrt: "SRT字幕を書き出し",
+      preparing: "書き出し準備中... {done} / {total}", pngGenerating: "PNG生成中... {done} / {total}", zipGenerating: "ZIP生成中... {percent}%", exportComplete: "完了: {count}枚を書き出しました。", exportFailed: "書き出しに失敗しました。", srtComplete: "完了: SRT字幕を{count}件を書き出しました。", srtEmpty: "書き出せる入力済み字幕がありません。",
+      failedReadJson: "JSONを読み込めませんでした。", cacheSaved: "キャッシュへ保存しました。", cacheSaveFailed: "キャッシュ保存に失敗しました。ブラウザの保存容量を確認してください。", cacheLoadFailed: "キャッシュ復元に失敗しました。", cacheMissing: "保存済みキャッシュがありません。", jszipMissing: "JSZipを読み込めませんでした。インターネット接続、またはCDNの読み込みを確認してください。", pngFailed: "PNG生成に失敗しました。", exportFailedRetry: "書き出しに失敗しました。枚数を減らして再試行してください。",
+      presetAutoName: "プリセット{count}", loadedSubtitles: "表示中の字幕なし"
+    },
+    en: {
+      appTitle: "Video Subtitle Animation Maker",
+      appSubtitle: "A browser tool for placing subtitles by button-click timing and exporting transparent PNG sequences.",
+      language: "Language / 言語",
+      manual: "Manual", manualTitle: "Manual", close: "Close", chooseFile: "Choose File", noFileSelected: "No file selected", selectedFile: "Selected: {name}",
+      saveJson: "Save JSON", loadJson: "Load JSON", saveCache: "Save Cache", loadCache: "Restore Cache",
+      secAssets: "Assets", secDefaults: "Defaults", secSubtitlesList: "Subtitle Buttons", secEntered: "Placed Subtitles", secSelected: "Selected Subtitle Settings", secExport: "Export",
+      audioFile: "Audio File", audioNotLoaded: "No audio loaded", audioLoaded: "Audio loaded", loadedFile: "Loaded: {name}", clear: "Clear",
+      lyricsTxt: "Subtitle TXT", lyricsHint: "Each line in the TXT file becomes one subtitle button. Blank lines are ignored.",
+      previewBgColor: "Preview Background Color", bgFit: "Background Image Fit", fitCover: "Fill Screen", fitContain: "Contain", fitStretch: "Stretch", previewBgImage: "Preview Background Image", bgScale: "Background Image Scale", bgOffsetX: "Background Image Offset X", bgOffsetY: "Background Image Offset Y", clearBgImage: "Clear Background Image", bgHint: "Background color and image are for preview only and are not included in transparent PNG export.",
+      defaultFont: "Default Font", defaultSize: "Default Size", defaultDuration: "Default Duration", autoChain: "Auto-adjust previous phrase end", yes: "On", no: "Off", defaultAnimation: "Default Animation", defaultAlign: "Default Alignment", applyDefaults: "Apply defaults to selected phrase",
+      animNormal: "Normal", animTypewriter: "Typewriter", animScaleReveal: "Scale Reveal", animJumpTypewriter: "Jump + Typewriter", animJumpReveal: "Jump Reveal", animJumpInOut: "Jump on In/Out",
+      alignLeft: "Left", alignCenter: "Center", alignRight: "Right",
+      lyricsNotLoaded: "No subtitles loaded", clearList: "Clear List", lyricsButtonEmpty: "Load a subtitle TXT file to create one button per line here.", enteredEmpty: "No subtitles placed yet. Press a subtitle button while audio is playing.",
+      inputAtCurrent: "Click to place at current time", enteredAt: "Placed {time} / click again to cancel", linesCount: "{count} lines",
+      previewCanvas: "Preview Canvas", previewCanvasSub: "1920 × 1080 / transparent export", noActiveSubtitles: "No active subtitle", previewAtCurrentTime: "Preview at Current Time", previewSeconds: "Preview Time", update: "Update", transportHint: "While audio is playing, press a subtitle button on the left to create a subtitle cue at that time.",
+      selectedEmpty: "Select a placed subtitle.", presetTitle: "Subtitle Setting Presets", presetName: "Preset Name", presetPlaceholder: "e.g. Chorus Center Jump", registeredPresets: "Saved Presets", selectPreset: "Select a preset", noPreset: "No presets", saveCurrentAsPreset: "Save Current Settings", applySelectedPreset: "Apply Selected Preset", delete: "Delete", presetHint: "Only appearance and animation settings are saved. Subtitle text and timing are not included.",
+      lyricText: "Subtitle Text", startSec: "Start (sec)", endSec: "End (sec)", animation: "Animation", textAlign: "Alignment", positionX: "Position X", positionY: "Position Y", wrapWidth: "Wrap Width", font: "Font", fontSize: "Font Size", textColor: "Text Color", lineHeight: "Line Height", letterSpacing: "Letter Spacing", letterSpacingPan: "Letter Spacing Pan", textPanX: "Text Pan X", textPanY: "Text Pan Y", textScale: "Text Scale", scalePan: "Scale Pan", textRotation: "Text Rotation", rotationPan: "Rotation Pan", typewriterSpeed: "Typewriter Speed", scaleRevealMin: "Scale Reveal Min Size", scaleRevealSpeed: "Scale Reveal Speed", jumpSize: "Jump Height", jumpSpeed: "Jump Speed", fadeIn: "Fade In", fadeOut: "Fade Out", stroke: "Stroke", dropShadow: "Drop Shadow", fadeInSec: "Fade In (sec)", fadeOutSec: "Fade Out (sec)", strokeColor: "Stroke Color", strokeWidth: "Stroke Width", shadowColor: "Shadow Color", shadowBlur: "Shadow Blur", shadowX: "Shadow X", shadowY: "Shadow Y", duplicate: "Duplicate",
+      export: "Export", fps: "FPS", prefix: "Prefix", setEndFromAudio: "Use Audio Length as End Time", exportZip: "Export Transparent PNG ZIP", exportSrt: "Export SRT Subtitles",
+      preparing: "Preparing export... {done} / {total}", pngGenerating: "Generating PNG... {done} / {total}", zipGenerating: "Creating ZIP... {percent}%", exportComplete: "Done: exported {count} frames.", exportFailed: "Export failed.", srtComplete: "Done: exported {count} SRT subtitles.", srtEmpty: "There are no placed subtitles to export.",
+      failedReadJson: "Could not load the JSON file.", cacheSaved: "Saved to cache.", cacheSaveFailed: "Could not save cache. Please check browser storage limits.", cacheLoadFailed: "Could not restore cache.", cacheMissing: "No saved cache was found.", jszipMissing: "JSZip could not be loaded. Please check your internet connection or the CDN.", pngFailed: "Failed to generate PNG.", exportFailedRetry: "Export failed. Try reducing the number of frames and run again.",
+      presetAutoName: "Preset {count}", loadedSubtitles: "No active subtitle"
+    }
+  };
+
+  function currentLang() {
+    return state.uiLanguage === "en" ? "en" : "ja";
+  }
+
+  function t(key, vars = {}) {
+    const table = I18N[currentLang()] || I18N.ja;
+    let text = table[key] ?? I18N.ja[key] ?? key;
+    Object.entries(vars).forEach(([name, value]) => {
+      text = text.replaceAll(`{${name}}`, String(value));
+    });
+    return text;
+  }
+
+  function setText(selector, key, vars = {}) {
+    const node = typeof selector === "string" ? document.querySelector(selector) : selector;
+    if (node) node.textContent = t(key, vars);
+  }
+
+  function setTextNodeLabel(container, key) {
+    if (!container) return;
+    const textNode = Array.from(container.childNodes).find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+    if (textNode) textNode.textContent = ` ${t(key)}`;
+  }
+
+  function setFieldLabel(input, key) {
+    const span = input?.closest(".field")?.querySelector("span");
+    if (span) span.textContent = t(key);
+  }
+
+  function setRangeLabel(input, key) {
+    const span = input?.closest(".range-field")?.querySelector(".range-head span");
+    if (span) span.textContent = t(key);
+  }
+
+  function setSelectOptions(select, items) {
+    if (!select) return;
+    Array.from(select.options).forEach((option) => {
+      if (items[option.value]) option.textContent = items[option.value];
+    });
+  }
+
+  function updateStaticText() {
+    document.documentElement.lang = currentLang();
+    document.title = t("appTitle");
+    if (uiLanguageSelect) uiLanguageSelect.value = currentLang();
+
+    updateManualContent();
+    setText(openManualBtn, "manual");
+    setText(".app-header h1", "appTitle");
+    setText(".app-header p", "appSubtitle");
+    setText("#langLabel", "language");
+    setText(saveJsonBtn, "saveJson");
+    setTextNodeLabel(loadJsonInput?.parentNode, "loadJson");
+    setText(saveCacheBtn, "saveCache");
+    setText(loadCacheBtn, "loadCache");
+
+    const leftSummaries = document.querySelectorAll(".left-panel details > summary");
+    if (leftSummaries[0]) leftSummaries[0].textContent = t("secAssets");
+    if (leftSummaries[1]) leftSummaries[1].textContent = t("secDefaults");
+    if (leftSummaries[2]) leftSummaries[2].textContent = t("secSubtitlesList");
+    if (leftSummaries[3]) leftSummaries[3].textContent = t("secEntered");
+    const rightSummaries = document.querySelectorAll(".right-panel details > summary");
+    if (rightSummaries[0]) rightSummaries[0].textContent = t("secSelected");
+    if (rightSummaries[1]) rightSummaries[1].textContent = t("secExport");
+
+    setFieldLabel(audioInput, "audioFile");
+    setText(audioChooseLabel, "chooseFile");
+    updateFileChoiceStatus(audioChosenLabel, state.audioFileName || audioChosenLabel?.dataset.filename || "");
+    audioFileInfo.textContent = state.audioDataUrl ? (state.audioFileName ? t("loadedFile", { name: state.audioFileName }) : t("audioLoaded")) : t("audioNotLoaded");
+    setText(clearAudioBtn, "clear");
+    setFieldLabel(lyricsInput, "lyricsTxt");
+    setText(lyricsChooseLabel, "chooseFile");
+    updateFileChoiceStatus(lyricsChosenLabel, lyricsChosenLabel?.dataset.filename || "");
+    setText(lyricsInput.closest('.field')?.nextElementSibling, "lyricsHint");
+    setFieldLabel(previewBgColorInput, "previewBgColor");
+    setFieldLabel(previewBgFitSelect, "bgFit");
+    setSelectOptions(previewBgFitSelect, { cover: t("fitCover"), contain: t("fitContain"), stretch: t("fitStretch") });
+    setFieldLabel(previewBgImageInput, "previewBgImage");
+    setText(previewBgChooseLabel, "chooseFile");
+    updateFileChoiceStatus(previewBgChosenLabel, previewBgChosenLabel?.dataset.filename || "");
+    setRangeLabel(previewBgScaleInput, "bgScale");
+    setRangeLabel(previewBgOffsetXInput, "bgOffsetX");
+    setRangeLabel(previewBgOffsetYInput, "bgOffsetY");
+    setText(clearPreviewBgImageBtn, "clearBgImage");
+    setText(clearPreviewBgImageBtn.closest('.button-row')?.nextElementSibling, "bgHint");
+
+    setFieldLabel(defaultFontFamilyInput, "defaultFont");
+    setRangeLabel(defaultFontSizeInput, "defaultSize");
+    setFieldLabel(defaultDurationInput, "defaultDuration");
+    setFieldLabel(autoChainSelect, "autoChain");
+    setSelectOptions(autoChainSelect, { "1": t("yes"), "0": t("no") });
+    setFieldLabel(defaultAnimationInput, "defaultAnimation");
+    setSelectOptions(defaultAnimationInput, { normal: t("animNormal"), typewriter: t("animTypewriter"), scaleReveal: t("animScaleReveal"), jumpTypewriter: t("animJumpTypewriter"), jumpReveal: t("animJumpReveal"), jumpInOut: t("animJumpInOut") });
+    setFieldLabel(defaultAlignInput, "defaultAlign");
+    setSelectOptions(defaultAlignInput, { left: t("alignLeft"), center: t("alignCenter"), right: t("alignRight") });
+    setText(applyDefaultToSelectedBtn, "applyDefaults");
+
+    setText(clearSubtitlesBtn, "clearList");
+    setText(".preview-toolbar strong", "previewCanvas");
+    setText(document.querySelector('.preview-toolbar strong')?.nextElementSibling, "previewCanvasSub");
+    setText(setPreviewFromAudioBtn, "previewAtCurrentTime");
+    setFieldLabel(previewTimeInput, "previewSeconds");
+    setText(renderPreviewBtn, "update");
+    setText(renderPreviewBtn.parentNode?.nextElementSibling, "transportHint");
+
+    setText(selectedEmptyMessage, "selectedEmpty");
+    setText(document.querySelector('.preset-title'), "presetTitle");
+    setFieldLabel(presetNameInput, "presetName");
+    presetNameInput.placeholder = t("presetPlaceholder");
+    setFieldLabel(presetSelect, "registeredPresets");
+    setText(savePresetBtn, "saveCurrentAsPreset");
+    setText(applyPresetBtn, "applySelectedPreset");
+    setText(deletePresetBtn, "delete");
+    setText(deletePresetBtn.closest('.button-row')?.nextElementSibling, "presetHint");
+    setFieldLabel(cueTextInput, "lyricText");
+    setFieldLabel(cueStartInput, "startSec");
+    setFieldLabel(cueEndInput, "endSec");
+    setFieldLabel(cueAnimationInput, "animation");
+    setSelectOptions(cueAnimationInput, { normal: t("animNormal"), typewriter: t("animTypewriter"), scaleReveal: t("animScaleReveal"), jumpTypewriter: t("animJumpTypewriter"), jumpReveal: t("animJumpReveal"), jumpInOut: t("animJumpInOut") });
+    setFieldLabel(cueAlignInput, "textAlign");
+    setSelectOptions(cueAlignInput, { left: t("alignLeft"), center: t("alignCenter"), right: t("alignRight") });
+    setRangeLabel(cueXInput, "positionX"); setRangeLabel(cueYInput, "positionY"); setRangeLabel(cueMaxWidthInput, "wrapWidth");
+    setFieldLabel(cueFontFamilyInput, "font"); setRangeLabel(cueFontSizeInput, "fontSize"); setFieldLabel(cueColorInput, "textColor"); setFieldLabel(cueLineHeightInput, "lineHeight");
+    setRangeLabel(cueLetterSpacingInput, "letterSpacing"); setRangeLabel(cueLetterSpacingPanInput, "letterSpacingPan"); setRangeLabel(cuePanXInput, "textPanX"); setRangeLabel(cuePanYInput, "textPanY"); setRangeLabel(cueScaleInput, "textScale"); setRangeLabel(cueScalePanInput, "scalePan"); setRangeLabel(cueRotationInput, "textRotation"); setRangeLabel(cueRotationPanInput, "rotationPan"); setRangeLabel(cueCpsInput, "typewriterSpeed"); setRangeLabel(cueScaleRevealMinInput, "scaleRevealMin"); setRangeLabel(cueScaleRevealSpeedInput, "scaleRevealSpeed"); setRangeLabel(cueJumpSizeInput, "jumpSize"); setRangeLabel(cueJumpSpeedInput, "jumpSpeed");
+    setTextNodeLabel(cueFadeInInput.closest('label'), "fadeIn"); setTextNodeLabel(cueFadeOutInput.closest('label'), "fadeOut"); setTextNodeLabel(cueStrokeEnabledInput.closest('label'), "stroke"); setTextNodeLabel(cueShadowEnabledInput.closest('label'), "dropShadow");
+    setFieldLabel(cueFadeInDurationInput, "fadeInSec"); setFieldLabel(cueFadeOutDurationInput, "fadeOutSec"); setFieldLabel(cueStrokeColorInput, "strokeColor"); setRangeLabel(cueStrokeWidthInput, "strokeWidth"); setFieldLabel(cueShadowColorInput, "shadowColor"); setRangeLabel(cueShadowBlurInput, "shadowBlur"); setFieldLabel(cueShadowOffsetXInput, "shadowX"); setFieldLabel(cueShadowOffsetYInput, "shadowY");
+    setText(duplicateCueBtn, "duplicate"); setText(deleteCueBtn, "delete");
+
+    setFieldLabel(exportFpsInput, "fps"); setFieldLabel(exportPrefixInput, "prefix"); setFieldLabel(exportStartInput, "startSec"); setFieldLabel(exportEndInput, "endSec"); setText(setExportEndFromAudioBtn, "setEndFromAudio"); setText(exportSrtBtn, "exportSrt"); setText(exportZipBtn, "exportZip");
+  }
+
+
+  function manualHtmlJa() {
+    return `
+      <h3>このツールについて</h3>
+      <p>音声に合わせて字幕を配置し、文字アニメーション付きの透過PNG連番を書き出すための動画字幕制作支援ツールです。背景色・背景画像は確認用で、書き出しには含まれません。</p>
+
+      <h3>1. 素材を読み込む</h3>
+      <ol>
+        <li><strong>音声ファイル</strong>から楽曲や仮音源を読み込みます。</li>
+        <li><strong>字幕TXT</strong>を読み込みます。TXTの1行が1つの字幕ボタンになります。</li>
+        <li>プレビュー確認用に背景色や背景画像を設定できます。背景画像はサイズ、X位置、Y位置を調整できます。</li>
+      </ol>
+
+      <h3>2. 字幕をタイミング入力する</h3>
+      <ol>
+        <li>音声を再生します。</li>
+        <li>任意のタイミングで左側の字幕ボタンをクリックすると、その時刻に字幕が配置されます。</li>
+        <li>配置済みの字幕ボタンはグレー表示になります。もう一度クリックすると配置をキャンセルできます。</li>
+        <li>入力済み字幕一覧から字幕を選択すると、右側で細かい設定を編集できます。</li>
+      </ol>
+
+      <h3>3. 基本設定</h3>
+      <p>基本フォント、基本サイズ、初期表示秒数、初期アニメーション、文字揃えを設定できます。新しく配置する字幕には、基本設定または直前の字幕設定が反映されます。</p>
+
+      <h3>4. 字幕ごとの編集</h3>
+      <ul>
+        <li>開始秒・終了秒、字幕テキストを編集できます。</li>
+        <li>位置X/Y、折り返し幅、フォント、フォントサイズ、文字色、行間、字間を調整できます。</li>
+        <li>文字PAN移動、サイズ移動、文字回転、回転移動、字間移動を使って、時間経過に合わせた動きを付けられます。</li>
+        <li>フェードイン、フェードアウト、縁取り、ドロップシャドウを設定できます。</li>
+      </ul>
+
+      <h3>5. アニメーション種類</h3>
+      <ul>
+        <li><strong>通常表示</strong>：字幕全体をそのまま表示します。</li>
+        <li><strong>タイプライター表示</strong>：文字が順番に表示されます。</li>
+        <li><strong>拡大しながら表示</strong>：登場時に1文字ずつ小さいサイズから設定サイズへ拡大しながら表示します。最小サイズと出現速度をスライダーで調整できます。</li>
+        <li><strong>ジャンプしながらタイプライター表示</strong>：文字が順番に表示され、1文字ずつ波打つようにジャンプします。</li>
+        <li><strong>ジャンプしながら表示</strong>：表示済みの文字全体に、1文字ずつ波打つジャンプを付けます。</li>
+        <li><strong>登場時と退場時だけジャンプ</strong>：字幕の出始めと消え際だけジャンプします。</li>
+      </ul>
+
+      <h3>6. プリセット</h3>
+      <p>選択中字幕の見た目やアニメーション設定をプリセット登録できます。字幕本文、開始秒、終了秒はプリセットに含まれません。別字幕へ同じ演出を使い回したい時に便利です。</p>
+
+      <h3>7. 保存と復元</h3>
+      <ul>
+        <li><strong>JSON保存</strong>：現在のプロジェクトをJSONとして保存します。</li>
+        <li><strong>JSON読込</strong>：保存したJSONを読み込みます。</li>
+        <li><strong>キャッシュ保存</strong>：ブラウザ内に作業状態を保存します。</li>
+        <li><strong>キャッシュ復元</strong>：保存済みキャッシュから復元します。</li>
+      </ul>
+
+      <h3>8. 書き出し</h3>
+      <ol>
+        <li>FPS、接頭辞、開始秒、終了秒を設定します。</li>
+        <li><strong>透過PNG連番ZIPを書き出し</strong>を押すと、字幕だけの透過PNG連番がZIPで保存されます。</li>
+        <li><strong>SRT字幕を書き出し</strong>を押すと、入力済み字幕の開始秒・終了秒・字幕本文をもとに.srt字幕ファイルを保存できます。</li>
+        <li>背景色・背景画像は書き出しには含まれません。動画編集ソフト側で背景や映像素材と合成してください。</li>
+      </ol>
+
+      <h3>注意</h3>
+      <p class="manual-note">長時間・高FPSで書き出すとPNG枚数が多くなり、ブラウザのメモリ使用量が増えます。エラーが出る場合は、書き出し範囲を短くするか、FPSを下げてください。</p>
+    `;
+  }
+
+  function manualHtmlEn() {
+    return `
+      <p class="manual-note">※英訳にはAI翻訳を使用しております。一部、おかしな表現があるかもしれませんがご了承ください。<br>AI translation was used for the English manual. Some expressions may sound unnatural.</p>
+
+      <h3>About this tool</h3>
+      <p>This is a browser-based video subtitle production support tool for placing subtitle phrases in sync with audio and exporting animated transparent PNG sequences. Preview background color and images are only for checking the layout and are not included in the export.</p>
+
+      <h3>1. Load assets</h3>
+      <ol>
+        <li>Load a song or temporary audio file from <strong>Audio File</strong>.</li>
+        <li>Load a <strong>Subtitle TXT</strong> file. Each line in the TXT file becomes one subtitle button.</li>
+        <li>You can set a preview background color or image. The background image scale, X offset, and Y offset can be adjusted.</li>
+      </ol>
+
+      <h3>2. Place subtitles to timing</h3>
+      <ol>
+        <li>Play the audio.</li>
+        <li>Click a subtitle button on the left at the timing where you want the subtitle to appear.</li>
+        <li>Placed subtitle buttons turn gray. Click again to cancel that placement.</li>
+        <li>Select a placed subtitle from the list to edit detailed settings on the right.</li>
+      </ol>
+
+      <h3>3. Default settings</h3>
+      <p>You can set the default font, size, duration, animation, and alignment. New subtitles use the default settings or inherit the previous subtitle settings.</p>
+
+      <h3>4. Edit each subtitle</h3>
+      <ul>
+        <li>Edit start time, end time, and subtitle text.</li>
+        <li>Adjust position X/Y, wrap width, font, font size, text color, line height, and letter spacing.</li>
+        <li>Add motion over time with text pan, scale pan, rotation, rotation pan, and letter spacing pan.</li>
+        <li>Enable fade in, fade out, stroke, and drop shadow.</li>
+      </ul>
+
+      <h3>5. Animation types</h3>
+      <ul>
+        <li><strong>Normal</strong>: Shows the whole subtitle normally.</li>
+        <li><strong>Typewriter</strong>: Reveals characters one by one.</li>
+        <li><strong>Scale Reveal</strong>: Reveals characters one by one while scaling them up. You can adjust the starting size and reveal speed with sliders.</li>
+        <li><strong>Jump + Typewriter</strong>: Reveals characters one by one while each character jumps in a wave.</li>
+        <li><strong>Jump Reveal</strong>: Applies wave-like jumping to the displayed characters.</li>
+        <li><strong>Jump on In/Out</strong>: Adds jumping only when the subtitle appears and disappears.</li>
+      </ul>
+
+      <h3>6. Presets</h3>
+      <p>You can save the selected subtitle’s appearance and animation settings as a preset. Subtitle text, start time, and end time are not included. This is useful for reusing the same effect on other subtitles.</p>
+
+      <h3>7. Save and restore</h3>
+      <ul>
+        <li><strong>Save JSON</strong>: Saves the current project as a JSON file.</li>
+        <li><strong>Load JSON</strong>: Loads a saved JSON file.</li>
+        <li><strong>Save Cache</strong>: Saves the work state inside the browser.</li>
+        <li><strong>Restore Cache</strong>: Restores from the saved browser cache.</li>
+      </ul>
+
+      <h3>8. Export</h3>
+      <ol>
+        <li>Set FPS, prefix, start time, and end time.</li>
+        <li>Press <strong>Export Transparent PNG ZIP</strong> to save the subtitle-only transparent PNG sequence as a ZIP file.</li>
+        <li>Background color and preview background images are not included in the export. Please composite them with video or background materials in your video editing software.</li>
+              <li>Press <strong>Export SRT Subtitles</strong> to save a .srt subtitle file based on the placed subtitles’ start time, end time, and subtitle text.</li>
+      </ol>
+
+      <h3>Note</h3>
+      <p class="manual-note">Long exports and high FPS create many PNG files and may increase browser memory usage. If an error occurs, shorten the export range or lower the FPS.</p>
+    `;
+  }
+
+  function updateManualContent() {
+    if (!manualModalBody || !manualModalTitle) return;
+    manualModalTitle.textContent = t("manualTitle");
+    closeManualFooterBtn.textContent = t("close");
+    manualModalBody.innerHTML = currentLang() === "en" ? manualHtmlEn() : manualHtmlJa();
+  }
+
+  function openManual() {
+    updateManualContent();
+    manualModal?.classList.remove("hidden");
+  }
+
+  function closeManual() {
+    manualModal?.classList.add("hidden");
+  }
+
+  function updateFileChoiceStatus(target, fileName = "") {
+    if (!target) return;
+    if (fileName) {
+      target.dataset.filename = fileName;
+      target.textContent = t("selectedFile", { name: fileName });
+    } else {
+      target.dataset.filename = "";
+      target.textContent = t("noFileSelected");
+    }
+  }
+
+  function applyLanguage(lang) {
+    state.uiLanguage = lang === "en" ? "en" : "ja";
+    const defaultFont = defaultFontFamilyInput.value;
+    const cueFont = cueFontFamilyInput.value;
+    populateFontSelect(defaultFontFamilyInput);
+    populateFontSelect(cueFontFamilyInput);
+    defaultFontFamilyInput.value = defaultFont || state.defaults.fontFamily;
+    cueFontFamilyInput.value = cueFont || (selectedCue()?.settings?.fontFamily || state.defaults.fontFamily);
+    updateStaticText();
+    renderAll();
+  }
 
   function uniqueId(prefix) {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -365,41 +737,15 @@
   }
 
   function populateFontSelect(select) {
+    const selected = select.value;
     select.innerHTML = "";
     FONT_OPTIONS.forEach((font) => {
       const option = document.createElement("option");
       option.value = font.value;
-      option.textContent = font.label;
+      option.textContent = currentLang() === "en" ? (font.labelEn || font.label) : font.label;
       select.append(option);
     });
-  }
-
-  function collectUsedFontFamilies() {
-    const fonts = new Set();
-    if (state.defaults?.fontFamily) fonts.add(state.defaults.fontFamily);
-    state.cues.forEach((cue) => {
-      if (cue.settings?.fontFamily) fonts.add(cue.settings.fontFamily);
-    });
-    (state.presets || []).forEach((preset) => {
-      if (preset.settings?.fontFamily) fonts.add(preset.settings.fontFamily);
-    });
-    return [...fonts].filter(Boolean);
-  }
-
-  async function waitForUsedFonts() {
-    if (!document.fonts || typeof document.fonts.load !== "function") return;
-    const fonts = collectUsedFontFamilies();
-    if (!fonts.length) return;
-
-    try {
-      await Promise.all(fonts.flatMap((fontFamily) => [
-        document.fonts.load(`400 96px ${fontFamily}`),
-        document.fonts.load(`700 96px ${fontFamily}`)
-      ]));
-      if (document.fonts.ready) await document.fonts.ready;
-    } catch (error) {
-      console.warn("フォントの事前読み込みに失敗しました。", error);
-    }
+    if (selected) select.value = selected;
   }
 
   function createCueStyle(templateCue = null) {
@@ -440,7 +786,7 @@
     return state.cues.find((cue) => cue.id === id) || null;
   }
 
-  function getLyricByCueId(cueId) {
+  function getSubtitleByCueId(cueId) {
     return state.lyrics.find((lyric) => lyric.cueId === cueId) || null;
   }
 
@@ -476,7 +822,7 @@
 
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
-    emptyOption.textContent = state.presets?.length ? "プリセットを選択" : "プリセット未登録";
+    emptyOption.textContent = state.presets?.length ? t("selectPreset") : t("noPreset");
     presetSelect.append(emptyOption);
 
     (state.presets || []).forEach((preset) => {
@@ -505,7 +851,7 @@
     syncDefaultControls();
   }
 
-  function parseLyricsText(text) {
+  function parseSubtitlesText(text) {
     return text
       .replace(/^\uFEFF/, "")
       .split(/\r?\n/)
@@ -519,7 +865,7 @@
       }));
   }
 
-  function assignLyricAtCurrentTime(lyric) {
+  function assignSubtitleAtCurrentTime(lyric) {
     const currentTime = Number.isFinite(audioPlayer.currentTime) ? audioPlayer.currentTime : Number(previewTimeInput.value) || 0;
     const start = round(Math.max(0, currentTime), 2);
     const duration = round(clamp(state.defaults.duration, 0.1, 60), 2);
@@ -552,7 +898,7 @@
     renderAll();
   }
 
-  function unassignLyric(lyric) {
+  function unassignSubtitle(lyric) {
     if (!lyric.cueId) return;
     const removingId = lyric.cueId;
     state.cues = state.cues.filter((cue) => cue.id !== removingId);
@@ -568,14 +914,14 @@
     renderAll();
   }
 
-  function renderLyricButtons() {
+  function renderSubtitleButtons() {
     lyricsButtonList.innerHTML = "";
-    lyricsCountInfo.textContent = state.lyrics.length ? `${state.lyrics.length}行` : "字幕未読込";
+    lyricsCountInfo.textContent = state.lyrics.length ? t("linesCount", { count: state.lyrics.length }) : t("lyricsNotLoaded");
 
     if (!state.lyrics.length) {
       const empty = document.createElement("div");
       empty.className = "empty-message";
-      empty.textContent = "字幕TXTを読み込むと、ここに1行ずつ字幕ボタンが追加されます。";
+      empty.textContent = t("lyricsButtonEmpty");
       lyricsButtonList.append(empty);
       return;
     }
@@ -590,14 +936,14 @@
       button.innerHTML = `
         <span class="lyric-number">${String(index + 1).padStart(3, "0")}</span>
         <span class="lyric-text"></span>
-        <span class="lyric-status">${cue ? `入力済み ${formatTime(cue.start)} / 再クリックでキャンセル` : "クリックで現在時刻に入力"}</span>
+        <span class="lyric-status">${cue ? t("enteredAt", { time: formatTime(cue.start) }) : t("inputAtCurrent")}</span>
       `;
       button.querySelector(".lyric-text").textContent = lyric.text;
       button.addEventListener("click", () => {
         if (lyric.cueId) {
-          unassignLyric(lyric);
+          unassignSubtitle(lyric);
         } else {
-          assignLyricAtCurrentTime(lyric);
+          assignSubtitleAtCurrentTime(lyric);
         }
       });
       lyricsButtonList.append(button);
@@ -609,7 +955,7 @@
     if (!state.cues.length) {
       const empty = document.createElement("div");
       empty.className = "empty-message";
-      empty.textContent = "入力済み字幕はまだありません。音声再生中に字幕ボタンを押してください。";
+      empty.textContent = t("enteredEmpty");
       cueList.append(empty);
       return;
     }
@@ -673,6 +1019,8 @@
     cueRotationInput.value = String(clamp(s.rotation ?? 0, -360, 360));
     cueRotationPanInput.value = String(clamp(s.rotationPan ?? 0, -720, 720));
     cueCpsInput.value = String(clamp(s.cps, 1, 120));
+    cueScaleRevealMinInput.value = String(clamp(s.scaleRevealMin ?? 18, 1, 100));
+    cueScaleRevealSpeedInput.value = String(clamp(s.scaleRevealSpeed ?? s.cps ?? 24, 1, 120));
     cueJumpSizeInput.value = String(clamp(s.jumpSize, 0, 160));
     cueJumpSpeedInput.value = String(clamp(s.jumpSpeed, 1, 20));
     cueFadeInInput.checked = Boolean(s.fadeIn);
@@ -707,6 +1055,8 @@
     cueRotationOutput.textContent = `${cueRotationInput.value}°`;
     cueRotationPanOutput.textContent = `${cueRotationPanInput.value}°`;
     cueCpsOutput.textContent = `${cueCpsInput.value} cps`;
+    cueScaleRevealMinOutput.textContent = `${cueScaleRevealMinInput.value}%`;
+    cueScaleRevealSpeedOutput.textContent = `${cueScaleRevealSpeedInput.value} cps`;
     cueJumpSizeOutput.textContent = `${cueJumpSizeInput.value}px`;
     cueJumpSpeedOutput.textContent = `${cueJumpSpeedInput.value}`;
     cueShadowBlurOutput.textContent = `${cueShadowBlurInput.value}px`;
@@ -741,6 +1091,8 @@
     s.rotation = Math.round(clamp(cueRotationInput.value, -360, 360));
     s.rotationPan = Math.round(clamp(cueRotationPanInput.value, -720, 720));
     s.cps = Math.round(clamp(cueCpsInput.value, 1, 120));
+    s.scaleRevealMin = Math.round(clamp(cueScaleRevealMinInput.value, 1, 100));
+    s.scaleRevealSpeed = Math.round(clamp(cueScaleRevealSpeedInput.value, 1, 120));
     s.jumpSize = Math.round(clamp(cueJumpSizeInput.value, 0, 160));
     s.jumpSpeed = round(clamp(cueJumpSpeedInput.value, 1, 20), 1);
     s.fadeIn = cueFadeInInput.checked;
@@ -761,19 +1113,19 @@
     };
     cue.settings = s;
 
-    const linkedLyric = state.lyrics.find((lyric) => lyric.id === cue.lyricId);
-    if (linkedLyric) linkedLyric.text = cue.text;
+    const linkedSubtitle = state.lyrics.find((lyric) => lyric.id === cue.lyricId);
+    if (linkedSubtitle) linkedSubtitle.text = cue.text;
 
     sortCues();
     updateRangeOutputs();
-    renderLyricButtons();
+    renderSubtitleButtons();
     renderCueList();
     renderCurrentPreview();
   }
 
   function getNextPresetName() {
     const count = (state.presets || []).length + 1;
-    return `プリセット${String(count).padStart(2, "0")}`;
+    return t("presetAutoName", { count: String(count).padStart(2, "0") });
   }
 
   function saveSelectedCueAsPreset() {
@@ -885,40 +1237,20 @@
 
   function drawImageFit(context, image, fit, width, height, scalePercent = 100, offsetX = 0, offsetY = 0) {
     if (!image) return;
-    const scale = clamp(scalePercent, 1, 100) / 100;
-    if (fit === "stretch") {
-      const drawWidth = Math.min(image.width, width * scale);
-      const drawHeight = Math.min(image.height, height * scale);
-      context.drawImage(image, (width - drawWidth) / 2 + offsetX, (height - drawHeight) / 2 + offsetY, drawWidth, drawHeight);
-      return;
-    }
 
-    const imageRatio = image.width / image.height;
-    const canvasRatio = width / height;
-    let drawWidth;
-    let drawHeight;
+    // 背景画像サイズは「100% = 画像の原寸」として扱う。
+    // プレビュー用背景は書き出しに含めないため、見た目確認を優先して自然サイズ基準で描画する。
+    const scale = clamp(Number(scalePercent) || 100, 1, 100) / 100;
+    const drawWidth = image.width * scale;
+    const drawHeight = image.height * scale;
 
-    if (fit === "contain") {
-      if (imageRatio > canvasRatio) {
-        drawWidth = width;
-        drawHeight = width / imageRatio;
-      } else {
-        drawHeight = height;
-        drawWidth = height * imageRatio;
-      }
-    } else {
-      if (imageRatio > canvasRatio) {
-        drawHeight = height;
-        drawWidth = height * imageRatio;
-      } else {
-        drawWidth = width;
-        drawHeight = width / imageRatio;
-      }
-    }
-
-    drawWidth = Math.min(image.width, drawWidth * scale);
-    drawHeight = Math.min(image.height, drawHeight * scale);
-    context.drawImage(image, (width - drawWidth) / 2 + offsetX, (height - drawHeight) / 2 + offsetY, drawWidth, drawHeight);
+    context.drawImage(
+      image,
+      (width - drawWidth) / 2 + (Number(offsetX) || 0),
+      (height - drawHeight) / 2 + (Number(offsetY) || 0),
+      drawWidth,
+      drawHeight
+    );
   }
 
   function splitChars(text) {
@@ -1045,11 +1377,28 @@
     context.textBaseline = "alphabetic";
 
     const maxWidth = Math.max(100, settings.maxWidth || 1580);
-    const layoutText = settings.animation === "scaleInChars" ? allText : text;
-    const lines = wrapTextLines(context, layoutText, maxWidth, letterSpacing);
+    const lines = wrapTextLines(context, text, maxWidth, letterSpacing);
     const lineHeight = Math.max(1, (settings.fontSize || 86) * (settings.lineHeight || 1.25));
     const totalHeight = lineHeight * Math.max(1, lines.length);
     const startY = -totalHeight / 2 + lineHeight * 0.85;
+
+    const totalVisibleChars = lines.reduce((sum, line) => sum + splitChars(line).length, 0);
+    const jumpInOutPowerForChar = (charIndex) => {
+      const duration = Math.max(0.01, cue.end - cue.start);
+      const speedFactor = clamp(settings.jumpSpeed || 8, 1, 20) / 8;
+      const charJumpDuration = clamp(0.34 / speedFactor, 0.12, 0.7);
+      const charDelay = clamp(0.045 / speedFactor, 0.012, 0.08);
+      const edgeDuration = Math.min(duration / 2, charJumpDuration + charDelay * Math.max(0, totalVisibleChars - 1));
+
+      const introLocal = (elapsed - charIndex * charDelay) / charJumpDuration;
+      const introPower = introLocal >= 0 && introLocal <= 1 ? Math.sin(Math.PI * introLocal) : 0;
+
+      const outroElapsed = time - (cue.end - edgeDuration);
+      const outroLocal = (outroElapsed - charIndex * charDelay) / charJumpDuration;
+      const outroPower = outroLocal >= 0 && outroLocal <= 1 ? Math.sin(Math.PI * outroLocal) : 0;
+
+      return Math.max(introPower, outroPower);
+    };
 
     let globalCharIndex = 0;
     lines.forEach((line, lineIndex) => {
@@ -1059,67 +1408,51 @@
       if (settings.align === "center") xLine -= lineWidth / 2;
       if (settings.align === "right") xLine -= lineWidth;
 
-      const isScaleInChars = settings.animation === "scaleInChars";
-      const shouldJumpChars = ["jumpTypewriter", "jumpReveal", "jumpInOut"].includes(settings.animation);
+      const shouldDrawChars = ["jumpTypewriter", "jumpReveal", "jumpInOut", "scaleReveal"].includes(settings.animation);
 
-      if (isScaleInChars) {
-        const cps = Math.max(1, settings.cps || 24);
-        const growDuration = clamp(4 / cps, 0.12, 0.48);
+      if (shouldDrawChars) {
         let cursorX = xLine;
-        splitChars(line).forEach((char) => {
+        let hasJumpInOutMotion = false;
+        const chars = splitChars(line);
+
+        chars.forEach((char) => {
           const charWidth = context.measureText(char).width;
-          const charStart = globalCharIndex / cps;
-          const charElapsed = elapsed - charStart;
+          let wavePower = 0;
 
-          if (charElapsed >= 0) {
-            const scaleProgress = easeOutCubic(charElapsed / growDuration);
-            const charScale = 0.18 + 0.82 * scaleProgress;
-            context.save();
-            context.translate(cursorX + charWidth / 2, yLine);
-            context.scale(charScale, charScale);
-            drawStyledText(context, char, -charWidth / 2, 0, settings, 0);
-            context.restore();
+          if (settings.animation === "scaleReveal") {
+            const revealSpeed = Math.max(1, settings.scaleRevealSpeed ?? settings.cps ?? 24);
+            const minScale = clamp(settings.scaleRevealMin ?? 18, 1, 100) / 100;
+            const localProgress = elapsed * revealSpeed - globalCharIndex;
+            if (localProgress >= 0) {
+              const revealProgress = easeOutCubic(clamp(localProgress, 0, 1));
+              const charScale = minScale + (1 - minScale) * revealProgress;
+              const prevAlpha = context.globalAlpha;
+              context.globalAlpha *= revealProgress;
+              context.save();
+              context.translate(cursorX + charWidth / 2, yLine);
+              context.scale(charScale, charScale);
+              drawStyledText(context, char, -charWidth / 2, 0, settings, 0);
+              context.restore();
+              context.globalAlpha = prevAlpha;
+            }
+          } else {
+            if (settings.animation === "jumpInOut") {
+              wavePower = jumpInOutPowerForChar(globalCharIndex);
+              hasJumpInOutMotion = hasJumpInOutMotion || wavePower > 0.001;
+            } else {
+              wavePower = Math.abs(Math.sin(elapsed * (settings.jumpSpeed || 8) + globalCharIndex * 0.65));
+            }
+
+            const jumpY = yLine - wavePower * (settings.jumpSize || 0);
+            drawStyledText(context, char, cursorX, jumpY, settings, 0);
           }
-
           cursorX += charWidth + letterSpacing;
           globalCharIndex += 1;
         });
-      } else if (shouldJumpChars) {
-        let jumpEdgePower = 1;
 
-        if (settings.animation === "jumpInOut") {
-          const duration = Math.max(0.01, cue.end - cue.start);
-          const baseInDuration = Math.max(0.65, (settings.fadeInDuration || 0.3) * 2.4);
-          const baseOutDuration = Math.max(0.65, (settings.fadeOutDuration || 0.35) * 2.4);
-          const inDuration = Math.min(duration / 2, baseInDuration);
-          const outDuration = Math.min(duration / 2, baseOutDuration);
-          const outroRemaining = Math.max(0, cue.end - time);
-
-          const introPower = elapsed < inDuration
-            ? Math.sin(clamp(elapsed / inDuration, 0, 1) * Math.PI)
-            : 0;
-          const outroPower = outroRemaining < outDuration
-            ? Math.sin((1 - clamp(outroRemaining / outDuration, 0, 1)) * Math.PI)
-            : 0;
-
-          jumpEdgePower = Math.max(introPower, outroPower);
-        }
-
-        if (jumpEdgePower > 0.001) {
-          let cursorX = xLine;
-          splitChars(line).forEach((char) => {
-            const charWidth = context.measureText(char).width;
-            const wavePhase = elapsed * (settings.jumpSpeed || 8) + globalCharIndex * 0.65;
-            const wave = Math.abs(Math.sin(wavePhase));
-            const charJump = wave * (settings.jumpSize || 0) * jumpEdgePower;
-            const jumpY = yLine - charJump;
-            drawStyledText(context, char, cursorX, jumpY, settings, 0);
-            cursorX += charWidth + letterSpacing;
-            globalCharIndex += 1;
-          });
-        } else {
-          drawStyledText(context, line, xLine, yLine, settings, letterSpacing);
-          globalCharIndex += splitChars(line).length;
+        if (settings.animation === "jumpInOut" && !hasJumpInOutMotion) {
+          // Keep the same per-character drawing path even while still,
+          // so this animation never falls back to whole-line jumping.
         }
       } else {
         drawStyledText(context, line, xLine, yLine, settings, letterSpacing);
@@ -1162,7 +1495,7 @@
       if (active.length) {
         activeCueInfo.textContent = active.map((cue) => cue.text).join(" / ");
       } else {
-        activeCueInfo.textContent = "表示中の字幕なし";
+        activeCueInfo.textContent = t("noActiveSubtitles");
       }
     }
   }
@@ -1172,7 +1505,7 @@
   }
 
   function renderAll() {
-    renderLyricButtons();
+    renderSubtitleButtons();
     renderCueList();
     syncCueEditor();
     renderCurrentPreview();
@@ -1226,11 +1559,11 @@
 
     if (state.audioDataUrl) {
       audioPlayer.src = state.audioDataUrl;
-      audioFileInfo.textContent = state.audioFileName ? `読込済み: ${state.audioFileName}` : "音声読込済み";
+      audioFileInfo.textContent = state.audioFileName ? t("loadedFile", { name: state.audioFileName }) : t("audioLoaded");
     } else {
       audioPlayer.removeAttribute("src");
       audioPlayer.load();
-      audioFileInfo.textContent = "音声未読込";
+      audioFileInfo.textContent = t("audioNotLoaded");
     }
   }
 
@@ -1245,6 +1578,7 @@
     state = {
       ...next,
       ...project,
+      uiLanguage: project.uiLanguage === "en" ? "en" : (project.uiLanguage === "ja" ? "ja" : next.uiLanguage),
       previewBackgroundScale: clamp(project.previewBackgroundScale ?? next.previewBackgroundScale, 1, 100),
       previewBackgroundOffsetX: clamp(project.previewBackgroundOffsetX ?? next.previewBackgroundOffsetX, -1920, 1920),
       previewBackgroundOffsetY: clamp(project.previewBackgroundOffsetY ?? next.previewBackgroundOffsetY, -1080, 1080),
@@ -1291,11 +1625,13 @@
 
     sortCues();
     await hydrateAssets();
-    await waitForUsedFonts();
+    if (!state.previewBackgroundImageDataUrl) updateFileChoiceStatus(previewBgChosenLabel, "");
+    if (!state.lyrics?.length) updateFileChoiceStatus(lyricsChosenLabel, "");
     syncPreviewBackgroundControls();
     syncDefaultControls();
     renderPresetControls();
     updatePreviewRangeMax();
+    updateStaticText();
     renderAll();
   }
 
@@ -1308,23 +1644,6 @@
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
-
-  function openManualModal() {
-    if (!manualModal) return;
-    manualModal.classList.remove("hidden");
-    manualModal.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
-    manualCloseBtn?.focus();
-  }
-
-  function closeManualModal() {
-    if (!manualModal) return;
-    manualModal.classList.add("hidden");
-    manualModal.setAttribute("aria-hidden", "true");
-    document.body.style.overflow = "";
-    manualOpenBtn?.focus();
   }
 
   function downloadJson() {
@@ -1370,24 +1689,69 @@
     if (project) {
       await loadProject(project);
     } else {
-      alert("保存済みキャッシュがありません。");
+      alert(t("cacheMissing"));
     }
+  }
+
+
+  function formatSrtTimestamp(seconds) {
+    const totalMs = Math.max(0, Math.round((Number(seconds) || 0) * 1000));
+    const ms = totalMs % 1000;
+    const totalSeconds = Math.floor(totalMs / 1000);
+    const sec = totalSeconds % 60;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const min = totalMinutes % 60;
+    const hour = Math.floor(totalMinutes / 60);
+    return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")},${String(ms).padStart(3, "0")}`;
+  }
+
+  function cleanSrtText(text) {
+    return String(text || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      .split("\n")
+      .map((line) => line.trim())
+      .join("\n")
+      .trim();
+  }
+
+  function exportSrtFile() {
+    const prefix = (exportPrefixInput.value || "subtitles").replace(/[\\/:*?"<>|]/g, "_");
+    const cues = state.cues
+      .filter((cue) => cleanSrtText(cue.text) && Number(cue.end) > Number(cue.start))
+      .slice()
+      .sort((a, b) => a.start - b.start || a.end - b.end);
+
+    if (!cues.length) {
+      alert(t("srtEmpty"));
+      return;
+    }
+
+    const body = cues.map((cue, index) => [
+      String(index + 1),
+      `${formatSrtTimestamp(cue.start)} --> ${formatSrtTimestamp(cue.end)}`,
+      cleanSrtText(cue.text)
+    ].join("\r\n")).join("\r\n\r\n") + "\r\n";
+
+    const blob = new Blob(["\uFEFF", body], { type: "text/plain;charset=utf-8" });
+    downloadBlob(blob, `${prefix}.srt`);
+    exportProgress.textContent = t("srtComplete", { count: cues.length });
   }
 
   async function exportTransparentPngZip() {
     if (!window.JSZip) {
-      alert("JSZipを読み込めませんでした。インターネット接続、またはCDNの読み込みを確認してください。");
+      alert(t("jszipMissing"));
       return;
     }
 
     const fps = Math.round(clamp(exportFpsInput.value, 1, 60));
     const start = round(clamp(exportStartInput.value, 0, 99999), 2);
     const end = round(clamp(exportEndInput.value, start + 0.01, 99999), 2);
-    const prefix = (exportPrefixInput.value || "subtitle").replace(/[\\/:*?"<>|]/g, "_");
+    const prefix = (exportPrefixInput.value || "subtitles").replace(/[\\/:*?"<>|]/g, "_");
     const frameCount = Math.floor((end - start) * fps) + 1;
 
     exportZipBtn.disabled = true;
-    exportProgress.textContent = `書き出し準備中... 0 / ${frameCount}`;
+    exportProgress.textContent = t("preparing", { done: 0, total: frameCount });
 
     try {
       const zip = new JSZip();
@@ -1395,24 +1759,24 @@
         const time = start + i / fps;
         renderFrame(time, { includePreviewBackground: false });
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-        if (!blob) throw new Error("PNG生成に失敗しました。");
+        if (!blob) throw new Error(t("pngFailed"));
         zip.file(`${prefix}_${String(i).padStart(5, "0")}.png`, blob);
 
         if (i % 5 === 0 || i === frameCount - 1) {
-          exportProgress.textContent = `PNG生成中... ${i + 1} / ${frameCount}`;
+          exportProgress.textContent = t("pngGenerating", { done: i + 1, total: frameCount });
           await new Promise((resolve) => setTimeout(resolve, 0));
         }
       }
 
       const blob = await zip.generateAsync({ type: "blob" }, (metadata) => {
-        exportProgress.textContent = `ZIP生成中... ${Math.round(metadata.percent)}%`;
+        exportProgress.textContent = t("zipGenerating", { percent: Math.round(metadata.percent) });
       });
       downloadBlob(blob, `${prefix}_png_sequence.zip`);
-      exportProgress.textContent = `完了: ${frameCount}枚を書き出しました。`;
+      exportProgress.textContent = t("exportComplete", { count: frameCount });
     } catch (error) {
       console.error(error);
-      exportProgress.textContent = "書き出しに失敗しました。";
-      alert(error?.message || "書き出しに失敗しました。枚数を減らして再試行してください。");
+      exportProgress.textContent = t("exportFailed");
+      alert(error?.message || t("exportFailedRetry"));
     } finally {
       exportZipBtn.disabled = false;
       renderCurrentPreview();
@@ -1420,12 +1784,27 @@
   }
 
   function bindEvents() {
+    openManualBtn?.addEventListener("click", openManual);
+    closeManualBtn?.addEventListener("click", closeManual);
+    closeManualFooterBtn?.addEventListener("click", closeManual);
+    manualModal?.addEventListener("click", (event) => {
+      if (event.target === manualModal) closeManual();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeManual();
+    });
+
+    uiLanguageSelect?.addEventListener("change", () => {
+      applyLanguage(uiLanguageSelect.value);
+    });
+
     audioInput.addEventListener("change", async () => {
       const file = audioInput.files?.[0];
       if (!file) return;
       state.audioDataUrl = await fileToDataUrl(file);
       state.audioFileName = file.name;
       state.audioMimeType = file.type;
+      updateFileChoiceStatus(audioChosenLabel, file.name);
       await hydrateAssets();
       audioPlayer.addEventListener("loadedmetadata", updatePreviewRangeMax, { once: true });
     });
@@ -1435,6 +1814,7 @@
       state.audioFileName = "";
       state.audioMimeType = "";
       audioInput.value = "";
+      updateFileChoiceStatus(audioChosenLabel, "");
       await hydrateAssets();
       renderCurrentPreview();
     });
@@ -1443,19 +1823,21 @@
       const file = lyricsInput.files?.[0];
       if (!file) return;
       const text = await fileToText(file);
-      state.lyrics = parseLyricsText(text);
+      updateFileChoiceStatus(lyricsChosenLabel, file.name);
+      state.lyrics = parseSubtitlesText(text);
       state.cues = [];
       state.selectedCueId = null;
       state.lastCreatedCueId = null;
       renderAll();
     });
 
-    clearLyricsBtn.addEventListener("click", () => {
+    clearSubtitlesBtn.addEventListener("click", () => {
       state.lyrics = [];
       state.cues = [];
       state.selectedCueId = null;
       state.lastCreatedCueId = null;
       lyricsInput.value = "";
+      updateFileChoiceStatus(lyricsChosenLabel, "");
       renderAll();
     });
 
@@ -1470,8 +1852,20 @@
     });
 
     previewBgScaleInput.addEventListener("input", () => {
-      state.previewBackgroundScale = Math.round(clamp(previewBgScaleInput.value, 10, 300));
+      state.previewBackgroundScale = Math.round(clamp(previewBgScaleInput.value, 1, 100));
       previewBgScaleOutput.textContent = `${state.previewBackgroundScale}%`;
+      renderCurrentPreview();
+    });
+
+    previewBgOffsetXInput.addEventListener("input", () => {
+      state.previewBackgroundOffsetX = Math.round(clamp(previewBgOffsetXInput.value, -1920, 1920));
+      previewBgOffsetXOutput.textContent = `${state.previewBackgroundOffsetX}px`;
+      renderCurrentPreview();
+    });
+
+    previewBgOffsetYInput.addEventListener("input", () => {
+      state.previewBackgroundOffsetY = Math.round(clamp(previewBgOffsetYInput.value, -1080, 1080));
+      previewBgOffsetYOutput.textContent = `${state.previewBackgroundOffsetY}px`;
       renderCurrentPreview();
     });
 
@@ -1480,6 +1874,7 @@
       if (!file) return;
       state.previewBackgroundImageDataUrl = await fileToDataUrl(file);
       state.previewBackgroundImage = await loadImage(state.previewBackgroundImageDataUrl);
+      updateFileChoiceStatus(previewBgChosenLabel, file.name);
       renderCurrentPreview();
     });
 
@@ -1487,6 +1882,7 @@
       state.previewBackgroundImageDataUrl = null;
       state.previewBackgroundImage = null;
       previewBgImageInput.value = "";
+      updateFileChoiceStatus(previewBgChosenLabel, "");
       renderCurrentPreview();
     });
 
@@ -1530,6 +1926,8 @@
       cueRotationInput,
       cueRotationPanInput,
       cueCpsInput,
+      cueScaleRevealMinInput,
+      cueScaleRevealSpeedInput,
       cueJumpSizeInput,
       cueJumpSpeedInput,
       cueFadeInInput,
@@ -1547,10 +1945,6 @@
     ];
     editorInputs.forEach((input) => input.addEventListener("input", updateCueFromEditor));
     editorInputs.forEach((input) => input.addEventListener("change", updateCueFromEditor));
-    cueFontFamilyInput.addEventListener("change", async () => {
-      await waitForUsedFonts();
-      renderCurrentPreview();
-    });
 
     duplicateCueBtn.addEventListener("click", duplicateSelectedCue);
     deleteCueBtn.addEventListener("click", () => deleteCue());
@@ -1568,21 +1962,10 @@
         exportEndInput.value = String(round(audioPlayer.duration, 2));
       }
     });
+    exportSrtBtn?.addEventListener("click", exportSrtFile);
     exportZipBtn.addEventListener("click", exportTransparentPngZip);
 
     saveJsonBtn.addEventListener("click", downloadJson);
-    manualOpenBtn?.addEventListener("click", openManualModal);
-    manualCloseBtn?.addEventListener("click", closeManualModal);
-    manualModal?.addEventListener("click", (event) => {
-      if (event.target instanceof HTMLElement && event.target.hasAttribute("data-manual-close")) {
-        closeManualModal();
-      }
-    });
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && manualModal && !manualModal.classList.contains("hidden")) {
-        closeManualModal();
-      }
-    });
     loadJsonInput.addEventListener("change", async () => {
       const file = loadJsonInput.files?.[0];
       if (!file) return;
@@ -1591,7 +1974,7 @@
         await loadProject(JSON.parse(text));
       } catch (error) {
         console.error(error);
-        alert("JSONを読み込めませんでした。");
+        alert(t("failedReadJson"));
       } finally {
         loadJsonInput.value = "";
       }
@@ -1600,10 +1983,10 @@
     saveCacheBtn.addEventListener("click", async () => {
       try {
         await saveCache();
-        alert("キャッシュへ保存しました。");
+        alert(t("cacheSaved"));
       } catch (error) {
         console.error(error);
-        alert("キャッシュ保存に失敗しました。ブラウザの保存容量を確認してください。");
+        alert(t("cacheSaveFailed"));
       }
     });
 
@@ -1612,7 +1995,7 @@
         await loadCache();
       } catch (error) {
         console.error(error);
-        alert("キャッシュ復元に失敗しました。");
+        alert(t("cacheLoadFailed"));
       }
     });
   }
@@ -1623,7 +2006,7 @@
     syncDefaultControls();
     syncPreviewBackgroundControls();
     bindEvents();
-    renderAll();
+    applyLanguage(state.uiLanguage);
   }
 
   init();
