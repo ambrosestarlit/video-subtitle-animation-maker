@@ -6,14 +6,14 @@
   <title>Video Subtitle Animation Maker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDMincho:wght@400;700&family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDPMincho:wght@400;700&family=Dela+Gothic+One&family=DotGothic16&family=Hina+Mincho&family=IBM+Plex+Sans+JP:wght@400;500;700&family=Klee+One:wght@400;600&family=Kiwi+Maru:wght@400;500&family=Kosugi&family=Kosugi+Maru&family=M+PLUS+1:wght@400;500;700&family=M+PLUS+1p:wght@400;500;700&family=M+PLUS+2:wght@400;500;700&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@400;600;700&family=Rampart+One&family=Reggae+One&family=Sawarabi+Gothic&family=Sawarabi+Mincho&family=Shippori+Mincho:wght@400;600;700&family=Stick&family=Yomogi&family=Yuji+Boku&family=Yuji+Mai&family=Yuji+Syuku&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&family=Zen+Old+Mincho:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDGothic:wght@400;700&family=BIZ+UDMincho:wght@400;700&family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDPMincho:wght@400;700&family=Dela+Gothic+One&family=DotGothic16&family=Hina+Mincho&family=IBM+Plex+Sans+JP:wght@400;500;700&family=Klee+One:wght@400;600&family=Kiwi+Maru:wght@400;500&family=Kosugi&family=Kosugi+Maru&family=M+PLUS+1:wght@400;500;700&family=M+PLUS+1p:wght@400;500;700&family=M+PLUS+2:wght@400;500;700&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+JP:wght@400;600;700&family=Rampart+One&family=Reggae+One&family=Sawarabi+Gothic&family=Sawarabi+Mincho&family=Shippori+Mincho:wght@400;600;700&family=Stick&family=Yomogi&family=Yuji+Boku&family=Yuji+Mai&family=Yuji+Syuku&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&family=Zen+Old+Mincho:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header class="app-header">
     <div>
       <h1>Video Subtitle Animation Maker</h1>
-      <p>音声に合わせて字幕を打ち込み、透過PNG連番を書き出す動画字幕作成支援ツール</p>
+      <p>音声に合わせて字幕をボタンクリックで配置し、透過PNG連番/SRTを書き出す動画字幕作成ツール</p>
     </div>
     <div class="header-actions">
       <button id="openManualBtn" type="button">取扱説明</button>
@@ -22,6 +22,7 @@
         <select id="uiLanguageSelect">
           <option value="ja">日本語</option>
           <option value="en">English</option>
+          <option value="ko">한국어</option>
         </select>
       </label>
       <button id="saveJsonBtn" type="button">JSON保存</button>
@@ -60,7 +61,7 @@
             </div>
             <input id="lyricsInput" class="visually-hidden-file" type="file" accept="text/plain,.txt" />
           </div>
-          <p class="hint">TXTの1行を1つの字幕ボタンにします。空行は自動除外します。</p>
+          <p class="hint">TXTの1行を1フレーズとして字幕ボタンにします。空行は自動除外します。</p>
 
           <div class="grid-2">
             <label class="field">
@@ -110,6 +111,15 @@
         <div class="control-stack">
           <div class="grid-2">
             <label class="field">
+              <span>キャンバス比率</span>
+              <select id="canvasAspectSelect">
+                <option value="16:9">16:9 横長</option>
+                <option value="9:16">9:16 縦長</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid-2">
+            <label class="field">
               <span>基本フォント</span>
               <select id="defaultFontFamilyInput"></select>
             </label>
@@ -124,7 +134,7 @@
               <input id="defaultDurationInput" type="number" min="0.1" max="60" step="0.1" value="3" />
             </label>
             <label class="field">
-              <span>前字幕終了を自動調整</span>
+              <span>前フレーズ終了を自動調整</span>
               <select id="autoChainSelect">
                 <option value="1">する</option>
                 <option value="0">しない</option>
@@ -152,7 +162,23 @@
               </select>
             </label>
           </div>
-          <button id="applyDefaultToSelectedBtn" type="button">選択中の字幕へ基本設定を反映</button>
+          <div class="field">
+            <span>任意フォント追加</span>
+            <div class="custom-file-row">
+              <label class="file-button custom-file-button" for="customFontInput"><span id="customFontChooseLabel">ファイルを選択</span></label>
+              <span id="customFontChosenLabel" class="file-select-status">選択されていません</span>
+            </div>
+            <input id="customFontInput" class="visually-hidden-file" type="file" accept=".ttf,.otf,.woff,.woff2,font/*" />
+          </div>
+          <div class="grid-2">
+            <label class="field">
+              <span>追加済みフォント</span>
+              <select id="customFontSelect"></select>
+            </label>
+            <button id="deleteCustomFontBtn" type="button" class="danger">選択フォントを削除</button>
+          </div>
+          <p class="hint custom-font-hint">アップロードしたフォントはこのブラウザ内で利用できます。JSON/キャッシュ保存にも含まれます。</p>
+          <button id="applyDefaultToSelectedBtn" type="button">全フレーズへ基本設定を反映</button>
         </div>
       </details>
 
@@ -161,14 +187,14 @@
         <div class="control-stack">
           <div class="lyrics-toolbar">
             <span id="lyricsCountInfo">字幕未読込</span>
-            <button id="clearSubtitlesBtn" type="button">一覧クリア</button>
+            <button id="clearLyricsBtn" type="button">一覧クリア</button>
           </div>
           <div id="lyricsButtonList" class="lyrics-button-list"></div>
         </div>
       </details>
 
       <details open>
-        <summary>入力済み字幕</summary>
+        <summary>入力済みフレーズ</summary>
         <div class="control-stack">
           <div id="cueList" class="cue-list"></div>
         </div>
@@ -208,15 +234,15 @@
 
     <aside class="panel right-panel">
       <details open>
-        <summary>選択中字幕設定</summary>
-        <div id="selectedEmptyMessage" class="empty-message">入力済み字幕を選択してください。</div>
+        <summary>選択中フレーズ設定</summary>
+        <div id="selectedEmptyMessage" class="empty-message">入力済みフレーズを選択してください。</div>
         <div id="cueEditor" class="control-stack hidden">
           <div class="preset-box">
-            <div class="preset-title">字幕設定プリセット</div>
+            <div class="preset-title">フレーズ設定プリセット</div>
             <div class="grid-2">
               <label class="field">
                 <span>プリセット名</span>
-                <input id="presetNameInput" type="text" placeholder="例：中央ジャンプ" />
+                <input id="presetNameInput" type="text" placeholder="例：サビ中央ジャンプ" />
               </label>
               <label class="field">
                 <span>登録済みプリセット</span>
@@ -301,6 +327,15 @@
               <span>行間</span>
               <input id="cueLineHeightInput" type="number" min="0.5" max="3" step="0.05" />
             </label>
+          </div>
+
+          <div class="inline-style-box">
+            <div class="inline-style-head">
+              <strong id="inlineStyleTitle">フォントの指定</strong>
+              <button id="addInlineStyleBtn" type="button" class="mini-button">+ 追加</button>
+            </div>
+            <p class="hint inline-style-hint">指定した文字列だけ、フォント・色・サイズを変更できます。複数指定はコンマで区切ってください。</p>
+            <div id="inlineStyleList" class="inline-style-list"></div>
           </div>
 
           <div class="range-field">
